@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="shortcut icon" href="./favicon.ico" type="image/x-icon" />
+<script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+<title>L.I.F.E</title>
+<style>
+body {
+    margin-top: 0px;
+}
+#container {
+    width: 80%;
+    margin: 0 auto;
+    line-height: 0px;
+}
+.day {
+    border-style: solid;
+    border-width: 1px;
+    border-color: darkgray;
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    margin: 1px;
+    /* margin-left: 2px; */
+    /* margin-top: 2px; */
+}
+.left-margin {
+    position: absolute;
+    left: 5%;
+}
+h1 {
+    text-align: center;
+    margin-top: 0px;
+    padding-top: 20px;
+}
+
+.detail {
+    display: none;
+    position: absolute;
+    margin: 0;
+    background-color: aliceblue;
+    border-width: 2px;
+}
+
+</style>
+</head>
+<body>
+
+<h1>LIFE Calendar</h1>
+<div style="text-align: center;">其实人生 并非虚耗</div><br>
+
+<div id="left-margin"></div>
+<div id="body"></div>
+<div id="detail"></div>
+
+<script>
+var display_count = 0;
+
+$.get(
+    "https://raw.githubusercontent.com/ssine/LifeCalendar/master/events.html",
+    (res) => {
+        var p = new DOMParser();
+        p = p.parseFromString(res, 'text/html');
+        process_events(p.getElementById('events'));
+    }
+);
+
+history.scrollRestoration = 'manual';
+const birth = new Date(1998, 4, 30);
+const expected_years = 102;
+const death = new Date(1998 + expected_years, 4, 30);
+const today = new Date();
+
+function getIdxByDate(date) {
+    return Math.floor((date.getTime() - birth.getTime()) / (1000*3600*24));
+}
+function getDateStr(date) {
+    return date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate();
+}
+function getColor(hue, credit) {
+    return 'hsl(' + hue + ',100%,' + (100-Math.min(100,credit)/2) + '%)';
+}
+
+var days = [];
+var details = [];
+for (var cur = new Date(+birth); cur < death; cur.setDate(cur.getDate() + 1)) {
+    var el = document.createElement('div');
+    el.className = 'day';
+    if (cur >= today) {
+        el.style.borderColor = '#000';
+    }
+    el.date = getDateStr(cur);
+    el.credit = 0;
+    el.no_credit_color = false;
+    el.hue = 180;
+    days.push(el);
+
+    var detail_el = document.createElement('div');
+    detail_el.className = 'detail';
+    detail_el.innerText = el.date;
+    detail_el.id = el.date;
+    detail_el.clicked = 0;
+    details.push(detail_el);
+
+    el.onmouseenter = (ev) => {
+        var detail_el = document.getElementById(ev.srcElement.date);
+        if (!detail_el.clicked) {
+            detail_el.style.display = 'block';
+            detail_el.style.left = ev.pageX + 10 + 'px';
+            detail_el.style.top = ev.pageY + 1 + 'px';
+            detail_el.style.zIndex = display_count++;
+        }
+    }
+    el.onmousemove = (ev) => {
+        var detail_el = document.getElementById(ev.srcElement.date);
+        if (!detail_el.clicked) {
+            detail_el.style.left = ev.pageX + 10 + 'px';
+            detail_el.style.top = ev.pageY + 1 + 'px';
+        }
+    }
+    el.onmouseleave = (ev) => {
+        var detail_el = document.getElementById(ev.srcElement.date);
+        if (!detail_el.clicked) {
+            detail_el.style.display = 'none';
+        }
+    }
+    el.onclick = (ev) => {
+        var detail_el = document.getElementById(ev.srcElement.date);
+        if (detail_el.clicked) {
+            detail_el.clicked = 0;
+            detail_el.style.borderStyle = 'none';
+            ev.srcElement.style.borderWidth = '1px';
+            ev.srcElement.style.margin = '1px';
+        } else {
+            detail_el.clicked = 1;
+            detail_el.style.borderStyle = 'solid';
+            ev.srcElement.style.borderWidth = '2px';
+            ev.srcElement.style.margin = '0px';
+        }
+    }
+}
+
+var container = document.createElement('div');
+container.id = 'container';
+for (var wk in days) {
+    container.appendChild(days[wk]);
+}
+document.getElementById('body').appendChild(container);
+for (var idx in details) {
+    document.getElementById('detail').appendChild(details[idx]);
+}
+
+var cur_age = 0;
+for (var cur = new Date(+birth); cur < death; cur.setFullYear(cur.getFullYear() + 1)) {
+    var y = days[getIdxByDate(cur)].getBoundingClientRect().top
+            - document.body.getBoundingClientRect().top;
+    var time_label = document.createElement('div');
+    time_label.className = 'left-margin';
+    time_label.style.top = y.toString() + 'px';
+    time_label.innerText = cur_age.toString() + '岁';
+    document.getElementById('left-margin').appendChild(time_label);
+    cur_age++;
+}
+
+var today_el = days[getIdxByDate(new Date())];
+today_el.style.borderColor = 'deeppink';
+
+function process_events(el) {
+    var events = el.childNodes;
+    for (var idx = 0; idx < events.length; idx++) {
+        if (events[idx].nodeType == 1) {
+            var ev = events[idx];
+            if (ev.getAttribute('date') != null) {
+                // one-day event
+                var cur_date = new Date(Date.parse(ev.getAttribute('date')));
+                var el_idx = getIdxByDate(cur_date);
+                var day_el = days[el_idx];
+                if (ev.getAttribute('icon') != null) {
+                    day_el.style.backgroundSize = '100% 100%';
+                    day_el.style.backgroundImage = 'url("' + ev.getAttribute('icon') + '")';
+                }
+                
+                if (ev.getAttribute('color') != null) {
+                    day_el.style.backgroundColor = ev.getAttribute('color');
+                    day_el.no_credit_color = true;
+                }
+
+                if (ev.className == 'base') {
+                    day_el.hue = parseInt(ev.getAttribute('hue'));
+                }
+
+                var ev_credit = parseFloat(ev.getAttribute('credit'));
+                day_el.credit += ev_credit == NaN ? 1 : ev_credit;
+                if (!day_el.no_credit_color)
+                    day_el.style.backgroundColor = getColor(day_el.hue, day_el.credit); 
+
+                if (details[el_idx].innerHTML == '') {
+                    details[el_idx].innerHTML = ev.innerHTML;
+                } else {
+                    details[el_idx].innerHTML += '<br>' + ev.innerHTML;
+                }
+                
+
+            } else if (ev.getAttribute('start') != null && ev.getAttribute('end') != null) {
+                // mutiple-day event
+                var start = new Date(Date.parse(ev.getAttribute('start')));
+                var end = new Date(Date.parse(ev.getAttribute('end')));
+                for(; start <= end; start.setDate(start.getDate()+1)) {
+                    var el_idx = getIdxByDate(start);
+                    var day_el = days[el_idx];
+                    if (ev.getAttribute('color') != null) {
+                        day_el.style.backgroundColor = ev.getAttribute('color');
+                        day_el.no_credit_color = true;
+                    }
+
+                    if (ev.className == 'base') {
+                        day_el.hue = parseInt(ev.getAttribute('hue'));
+                    }
+
+                    var ev_credit = parseFloat(ev.getAttribute('credit'));
+                    day_el.credit += ev_credit == NaN ? 1 : ev_credit;
+                    if (!day_el.no_credit_color)
+                        day_el.style.backgroundColor = getColor(day_el.hue, day_el.credit); 
+                    // console.log(getColor(day_el.hue, day_el.credit));
+
+                    if (details[el_idx].innerHTML == '') {
+                        details[el_idx].innerHTML = ev.innerHTML;
+                    } else {
+                        details[el_idx].innerHTML += '<br>' + ev.innerHTML;
+                    }
+                }
+
+            }
+        }
+    }
+}
+
+
+var cur_offset_y = today_el.getBoundingClientRect().top - document.body.getBoundingClientRect().top;
+window.onload = () => {
+    window.scroll(0, cur_offset_y - document.documentElement.clientHeight/2);
+    // console.log(cur_offset_y - document.documentElement.clientHeight/2);
+}
+
+// setTimeout(() => {
+//     window.scroll(0, cur_offset_y - document.documentElement.clientHeight/2);
+// }, 500);
+</script>
+</body>
+</html>
