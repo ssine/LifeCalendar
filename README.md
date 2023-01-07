@@ -2,7 +2,9 @@
 
 Sample Site: [Life Calendar](https://ssine.ink/LifeCalendar/) (Just a github page of this repo). You'll need to find a way to update the events.html daily yourself.
 
-For more details, see [my blog](https://ssine.ink/blog/life-calendar)
+For more details, see [my blog](https://ssine.ink/blog/life-calendar).
+
+![sample](./assets/life-calendar.png)
 
 Features:
 
