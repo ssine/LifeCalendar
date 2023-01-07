@@ -101,7 +101,7 @@
     let display_count = 0;
 
     $.get(
-      "https://example.com/url/to/events.html",
+      "./events.html",
       (res) => {
         let p = new DOMParser();
         p = p.parseFromString(res, 'text/html');
