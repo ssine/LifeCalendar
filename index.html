@@ -248,7 +248,11 @@
             if (n.nodeType === Node.TEXT_NODE) {
               if (n.textContent.startsWith('*')) {
                 if (password) {
-                  n.textContent = CryptoJS.AES.decrypt(n.textContent.substr(1), password).toString(CryptoJS.enc.Utf8);
+                  try {
+                    n.textContent = CryptoJS.AES.decrypt(n.textContent.substr(1), password).toString(CryptoJS.enc.Utf8);
+                  } catch {
+                    n.textContent = '*decryption error'
+                  }
                 } else {
                   n.textContent = '*encrypted message'
                 }
