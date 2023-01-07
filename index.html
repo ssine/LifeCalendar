@@ -219,7 +219,11 @@
       let time_label = document.createElement('div');
       time_label.className = 'left-margin';
       time_label.style.top = y.toString() + 'px';
-      time_label.innerText = cur_age.toString() + '岁';
+      if (navigator.language === 'zh-CN') {
+        time_label.innerText = cur_age.toString() + ' 岁';
+      } else {
+        time_label.innerText = 'age ' + cur_age.toString();
+      }
       document.getElementById('left-margin').appendChild(time_label);
       cur_age++;
     }
