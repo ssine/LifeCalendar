@@ -4,7 +4,8 @@
 <head>
   <link rel="shortcut icon" href="./favicon.ico" type="image/x-icon" />
   <script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
-  <title>L.I.F.E</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/rollups/aes.js" integrity="sha256-/H4YS+7aYb9kJ5OKhFYPUjSJdrtV6AeyJOtTkw6X72o=" crossorigin="anonymous"></script>
+  <title>Life Calendar</title>
   <style>
     body {
       margin-top: 0px;
@@ -81,12 +82,26 @@
   <div id="left-margin"></div>
   <div id="body"></div>
   <div id="detail"></div>
+  <center>
+    <input id="password" /><button onclick="setPassword()">set password</button>
+  </center>
+
+  <script>
+    function setPassword() {
+      const pw = document.getElementById('password').value;
+      document.cookie = `password=${pw};max-age=${365 * 24 * 3600}`;
+      location.reload();
+    }
+    function getCookie(sKey) {
+      return decodeURIComponent(document.cookie.replace(new RegExp("(?:(?:^|.*;)\\s*" + encodeURIComponent(sKey).replace(/[-.+*]/g, "\\$&") + "\\s*\\=\\s*([^;]*).*$)|^.*$"), "$1")) || null;
+    }
+  </script>
 
   <script>
     let display_count = 0;
 
     $.get(
-      "https://source-bed.oss-cn-beijing.aliyuncs.com/life_calendar/events.html",
+      "https://example.com/url/to/events.html",
       (res) => {
         let p = new DOMParser();
         p = p.parseFromString(res, 'text/html');
@@ -99,6 +114,7 @@
     const expected_years = 102;
     const death = new Date(1998 + expected_years, 4, 30);
     const today = new Date();
+    const password = getCookie('password');
 
     function getIdxByDate(date) {
       return Math.floor((date.getTime() - birth.getTime()) / (1000 * 3600 * 24));
@@ -111,7 +127,66 @@
     }
 
     let days = [];
-    let details = [];
+    let dateToDetailsData = {};
+    let detailsContainer = document.getElementById('detail');
+
+    const genDetailEl = (date) => {
+      let detail_el = document.createElement('div');
+      detail_el.className = 'detail';
+      detail_el.innerHTML = date;
+      if (dateToDetailsData[date]) {
+        detail_el.innerHTML += '<br>' + dateToDetailsData[date];
+      }
+      detail_el.id = date;
+      detail_el.clicked = 0;
+      detailsContainer.appendChild(detail_el);
+      return detail_el
+    };
+
+    const removeDetailEl = (date) => {
+      document.getElementById(date).remove();
+    };
+
+    const onmouseenter = (ev) => {
+      let detail_el = document.getElementById(ev.srcElement.date);
+      if (!detail_el) {
+        detail_el = genDetailEl(ev.srcElement.date);
+      }
+      if (!detail_el.clicked) {
+        detail_el.style.display = 'block';
+        detail_el.style.left = ev.pageX + 10 + 'px';
+        detail_el.style.top = ev.pageY + 1 + 'px';
+        detail_el.style.zIndex = display_count++;
+      }
+    };
+    const onmousemove = (ev) => {
+      let detail_el = document.getElementById(ev.srcElement.date);
+      if (!detail_el.clicked) {
+        detail_el.style.left = ev.pageX + 10 + 'px';
+        detail_el.style.top = ev.pageY + 1 + 'px';
+      }
+    };
+    const onmouseleave = (ev) => {
+      let detail_el = document.getElementById(ev.srcElement.date);
+      if (!detail_el.clicked) {
+        detail_el.remove()
+      }
+    }
+    const onclick = (ev) => {
+      let detail_el = document.getElementById(ev.srcElement.date);
+      if (detail_el.clicked) {
+        detail_el.clicked = 0;
+        detail_el.style.borderStyle = 'none';
+        ev.srcElement.style.borderWidth = '1px';
+        ev.srcElement.style.margin = '1px';
+      } else {
+        detail_el.clicked = 1;
+        detail_el.style.borderStyle = 'solid';
+        ev.srcElement.style.borderWidth = '2px';
+        ev.srcElement.style.margin = '0px';
+      }
+    }
+
     for (let cur = new Date(+birth); cur < death; cur.setDate(cur.getDate() + 1)) {
       let el = document.createElement('div');
       el.className = 'day';
@@ -124,49 +199,10 @@
       el.hue = 180;
       days.push(el);
 
-      let detail_el = document.createElement('div');
-      detail_el.className = 'detail';
-      detail_el.innerText = el.date;
-      detail_el.id = el.date;
-      detail_el.clicked = 0;
-      details.push(detail_el);
-
-      el.onmouseenter = (ev) => {
-        let detail_el = document.getElementById(ev.srcElement.date);
-        if (!detail_el.clicked) {
-          detail_el.style.display = 'block';
-          detail_el.style.left = ev.pageX + 10 + 'px';
-          detail_el.style.top = ev.pageY + 1 + 'px';
-          detail_el.style.zIndex = display_count++;
-        }
-      }
-      el.onmousemove = (ev) => {
-        let detail_el = document.getElementById(ev.srcElement.date);
-        if (!detail_el.clicked) {
-          detail_el.style.left = ev.pageX + 10 + 'px';
-          detail_el.style.top = ev.pageY + 1 + 'px';
-        }
-      }
-      el.onmouseleave = (ev) => {
-        let detail_el = document.getElementById(ev.srcElement.date);
-        if (!detail_el.clicked) {
-          detail_el.style.display = 'none';
-        }
-      }
-      el.onclick = (ev) => {
-        let detail_el = document.getElementById(ev.srcElement.date);
-        if (detail_el.clicked) {
-          detail_el.clicked = 0;
-          detail_el.style.borderStyle = 'none';
-          ev.srcElement.style.borderWidth = '1px';
-          ev.srcElement.style.margin = '1px';
-        } else {
-          detail_el.clicked = 1;
-          detail_el.style.borderStyle = 'solid';
-          ev.srcElement.style.borderWidth = '2px';
-          ev.srcElement.style.margin = '0px';
-        }
-      }
+      el.onmouseenter = onmouseenter;
+      el.onmousemove = onmousemove;
+      el.onmouseleave = onmouseleave;
+      el.onclick = onclick;
     }
 
     let container = document.createElement('div');
@@ -175,9 +211,6 @@
       container.appendChild(days[wk]);
     }
     document.getElementById('body').appendChild(container);
-    for (let idx in details) {
-      document.getElementById('detail').appendChild(details[idx]);
-    }
 
     let cur_age = 0;
     for (let cur = new Date(+birth); cur < death; cur.setFullYear(cur.getFullYear() + 1)) {
@@ -207,6 +240,19 @@
       for (let idx = 0; idx < events.length; idx++) {
         if (events[idx].nodeType == 1) {
           let ev = events[idx];
+          ev.childNodes.forEach(n => {
+            if (n.nodeType === Node.TEXT_NODE) {
+              if (n.textContent.startsWith('*')) {
+                if (password) {
+                  n.textContent = CryptoJS.AES.decrypt(n.textContent.substr(1), password).toString(CryptoJS.enc.Utf8);
+                } else {
+                  n.textContent = '*encrypted message'
+                }
+              }
+            }
+          })
+          const content = ev.innerHTML;
+
           if (ev.getAttribute('date') != null) {
             // one-day event
             let cur_date = new Date(Date.parse(ev.getAttribute('date')));
@@ -232,11 +278,13 @@
             if (!day_el.no_credit_color)
               day_el.style.backgroundColor = getColor(day_el.hue, day_el.credit);
 
-            if (details[el_idx].innerHTML == '') {
-              details[el_idx].innerHTML = ev.innerHTML;
+            dateStr = getDateStr(cur_date);
+            if (!dateToDetailsData[dateStr]) {
+              dateToDetailsData[dateStr] = content;
             } else {
-              details[el_idx].innerHTML += '<br>' + ev.innerHTML;
+              dateToDetailsData[dateStr] += '<br>' + content;
             }
+
             ev.childNodes.forEach((cn) => {
               let emo = is_emoji(cn.textContent.trim());
               if (cn.nodeType === 3 && emo) {
@@ -266,10 +314,11 @@
                 day_el.style.backgroundColor = getColor(day_el.hue, day_el.credit);
               // console.log(getColor(day_el.hue, day_el.credit));
 
-              if (details[el_idx].innerHTML == '') {
-                details[el_idx].innerHTML = ev.innerHTML;
+              dateStr = getDateStr(start);
+              if (!dateToDetailsData[dateStr]) {
+                dateToDetailsData[dateStr] = content;
               } else {
-                details[el_idx].innerHTML += '<br>' + ev.innerHTML;
+                dateToDetailsData[dateStr] += '<br>' + content;
               }
             }
 
